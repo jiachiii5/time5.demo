@@ -1,84 +1,104 @@
-# 系統架構設計：數位時光膠囊
+# GeoDrop 系統架構設計 (Architecture)
 
 ## 1. 技術架構說明
 
-本專案採用經典的 MVC (Model-View-Controller) 架構模式，並以 Python Flask 框架作為核心開發基礎：
+本專案採用經典的伺服器渲染（Server-Side Rendering, SSR）架構，不進行前後端分離，以求快速驗證想法並簡化部署。
 
-*   **選用技術與原因：**
-    *   **Python + Flask**：輕量且靈活，非常適合快速開發與小型專案的後端邏輯。
-    *   **Jinja2**：與 Flask 整合度高，能快速將後端資料渲染成 HTML 頁面，不需前後端分離，降低開發複雜度。
-    *   **SQLite**：輕量級關聯式資料庫，無需額外安裝資料庫伺服器，資料直接存在本地檔案中，非常適合本專案的儲存需求。
-*   **MVC 模式職責劃分：**
-    *   **Model (模型)**：負責定義資料結構（膠囊標題、內容、解鎖日期、心情標籤等）以及與 SQLite 資料庫的互動。
-    *   **View (視圖)**：負責呈現使用者介面，使用 HTML/CSS 與 Jinja2 模板動態顯示資料。
-    *   **Controller (控制器)**：由 Flask 的路由 (Routes) 擔任，負責接收使用者的請求 (如：建立膠囊、查看列表)，呼叫 Model 處理資料，最後將結果傳遞給 View 渲染。
+### 選用技術與原因
+- **後端框架：Python + Flask**
+  - **原因**：輕量級、彈性高，適合快速建立 MVP，且 Python 有豐富的數學與地理運算函式庫，有利於後續演算法擴充。
+- **模板引擎：Jinja2**
+  - **原因**：Flask 內建，能快速將後端資料注入 HTML 頁面中渲染給前端，降低開發成本。
+- **資料庫：SQLite**
+  - **原因**：無需額外架設資料庫伺服器，檔案型資料庫即可滿足初期開發與 MVP 的儲存需求。
+- **前端技術：HTML5 / CSS / Vanilla JS**
+  - **原因**：使用原生 JavaScript 呼叫 HTML5 Geolocation API 來取得 GPS 定位，並透過簡單的 AJAX/Fetch 與後端進行經緯度資料驗證。
+
+### Flask MVC 模式說明
+- **Model（模型）**：負責與 SQLite 溝通，定義 `User`、`Package` (包裹)、`UnlockRecord` (解鎖紀錄) 等資料表結構與存取邏輯。
+- **View（視圖）**：在此架構下為 Jinja2 Templates，負責將 HTML 呈現給使用者介面。
+- **Controller（控制器）**：Flask 的 Routes，負責接收前端請求、呼叫 Model 處理業務邏輯（如判斷是否在 50 公尺內），最後將結果傳給 Jinja2 渲染畫面。
+
+---
 
 ## 2. 專案資料夾結構
 
-本專案的資料夾結構設計如下，旨在讓程式碼職責分離，方便後續維護與擴充：
+以下為 GeoDrop 專案的目錄結構規劃：
 
 ```text
 time5.demo/
-├── app/                      # 應用程式主程式庫
-│   ├── __init__.py           # Flask App 初始化設定
-│   ├── models.py             # 資料庫模型 (定義 Capsule 等資料表)
-│   ├── routes/               # 路由模組 (Controller)
-│   │   ├── __init__.py
-│   │   └── main_routes.py    # 主要頁面路由與 API (如建立、讀取膠囊)
-│   ├── templates/            # Jinja2 HTML 模板 (View)
-│   │   ├── base.html         # 共用版面 (Header, Footer)
-│   │   ├── index.html        # 首頁 (倒數計時與統計)
-│   │   ├── create.html       # 建立膠囊頁面
-│   │   └── list.html         # 回憶清單與解鎖頁面
-│   └── static/               # 靜態資源 (CSS, JavaScript, 圖片)
-│       ├── css/
-│       │   └── style.css     # 全局樣式
-│       ├── js/
-│       │   └── main.js       # 互動邏輯 (如倒數計時計算)
-│       └── images/           # 預設圖片與素材
-├── instance/                 # 本地端運行資料 (不進版控)
+│
+├── app/                      # Flask 應用主目錄
+│   ├── __init__.py           # 建立 Flask App 實例與初始化
+│   ├── models/               # 資料庫模型 (Model)
+│   │   └── database.py       # 存放 User, Package, Record 等資料定義
+│   ├── routes/               # Flask 路由 (Controller)
+│   │   ├── main.py           # 主頁面、地圖相關路由
+│   │   └── user.py           # 用戶登入、個人紀錄路由
+│   ├── static/               # 靜態資源檔案
+│   │   ├── css/
+│   │   │   └── style.css     # 全域樣式與地圖樣式
+│   │   └── js/
+│   │       └── map.js        # 處理 HTML5 GPS 定位與地圖互動邏輯
+│   └── templates/            # Jinja2 HTML 模板 (View)
+│       ├── base.html         # 共用版型 (Header/Footer)
+│       ├── index.html        # 首頁與地圖主畫面
+│       ├── unlock.html       # 解鎖成功與包裹內容畫面
+│       └── profile.html      # 個人歷史紀錄畫面
+│
+├── instance/                 # 存放不進版控的執行實例檔案
 │   └── database.db           # SQLite 資料庫檔案
-├── docs/                     # 專案文件 (PRD, 架構圖等)
+│
+├── docs/                     # 專案文件
 │   ├── PRD.md                # 產品需求文件
-│   └── ARCHITECTURE.md       # 系統架構設計文件
-├── app.py                    # 專案啟動入口 (執行此檔啟動伺服器)
+│   └── ARCHITECTURE.md       # 系統架構文件
+│
+├── .gitignore                # Git 忽略設定
 ├── requirements.txt          # Python 依賴套件清單
-└── README.md                 # 專案說明文件
+└── app.py                    # 專案啟動入口 (Entry Point)
 ```
+
+---
 
 ## 3. 元件關係圖
 
-以下展示使用者從瀏覽器操作時，系統內部的資料流與元件互動關係：
+以下圖示說明使用者（瀏覽器）如何與系統元件互動：
 
 ```mermaid
-graph TD
-    Browser[瀏覽器 (Browser)]
+flowchart TD
+    Browser[瀏覽器 (HTML/JS)]
     
-    subgraph Flask Application
-        Route[Flask 路由 (Controller)]
-        Model[資料模型 (Model)]
+    subgraph Server [Flask 伺服器]
+        Route[Flask Route (Controller)]
+        Model[資料庫模型 (Model)]
         Template[Jinja2 模板 (View)]
     end
     
     Database[(SQLite 資料庫)]
     
-    Browser -- "1. 發送 HTTP 請求\n(例如：建立膠囊, 瀏覽列表)" --> Route
-    Route -- "2. 查詢/寫入資料" --> Model
-    Model -- "3. 執行 SQL 指令" --> Database
-    Database -- "4. 回傳資料結果" --> Model
-    Model -- "5. 將資料轉交" --> Route
-    Route -- "6. 傳遞資料與狀態" --> Template
-    Template -- "7. 渲染 HTML 頁面" --> Route
-    Route -- "8. 回傳 HTTP 回應" --> Browser
+    Browser -- 1. HTTP Request (例如帶有 GPS 座標的解鎖請求) --> Route
+    Route -- 2. 查詢/驗證包裹資料 --> Model
+    Model -- 3. SQL 查詢 --> Database
+    Database -- 4. 回傳資料 --> Model
+    Model -- 5. 業務邏輯判斷 (距離計算) --> Route
+    Route -- 6. 注入資料並渲染 --> Template
+    Template -- 7. 產生最終 HTML --> Route
+    Route -- 8. HTTP Response --> Browser
+    Browser -- 9. 呼叫 HTML5 Geolocation API --> Browser
 ```
+
+---
 
 ## 4. 關鍵設計決策
 
-1.  **整合式渲染 (Server-Side Rendering)**：
-    *   **原因**：為了快速驗證想法與完成 MVP，我們選擇不用 React/Vue 進行前後端分離，而是利用 Jinja2 在伺服器端直接渲染畫面。這樣可以減少 API 的設計負擔，並降低開發與部署的複雜度。
-2.  **檔案型資料庫 (SQLite)**：
-    *   **原因**：時光膠囊 MVP 版本主要著重於功能驗證與單機/輕量運行，不需要承載高併發流量。使用 SQLite 可以免去資料庫伺服器的建置與維護成本。
-3.  **時間鎖的後端驗證機制**：
-    *   **原因**：為了確保「解鎖日期」的機制不被輕易破解，時間鎖的驗證必須在後端 (Flask Route) 執行。前端只負責顯示倒數計時，任何對未解鎖膠囊內容的存取請求，後端都會檢查當前時間，若未到期則拒絕回傳真實內容。
-4.  **心情標籤的純文字儲存 (MVP 階段)**：
-    *   **原因**：初期為了簡化資料表關聯，心情標籤 (Mood Tags) 將以逗號分隔的字串直接存入 Capsule 資料表中，而非建立獨立的 Tag 資料表。這能在不影響查詢體驗的前提下，加快開發速度。
+1. **GPS 圍欄偵測在後端驗證 (Server-side Verification)**
+   - **決定**：前端 JS 負責持續取得使用者 GPS 並顯示在地圖上，但當使用者點擊「解鎖」時，前端必須將經緯度發送至後端，由後端計算距離是否小於 50 公尺來決定是否解鎖成功。
+   - **原因**：若全由前端判斷，有心人士容易透過修改 JS 程式碼來作弊。後端驗證能確保解鎖邏輯的安全與公平性。
+
+2. **隨機遞送演算法的觸發時機**
+   - **決定**：MVP 階段採用「背景定時生成」或「管理員手動生成」批次處理，先在資料庫預先產生一批包裹，而非每次使用者開啟 App 時才即時計算生成。
+   - **原因**：即時計算會大幅增加伺服器回應時間；預先生成可讓使用者查詢時只進行簡單的「地理範圍查詢（Bounding Box）」，提升地圖讀取效能。
+
+3. **使用原生 Geolocation API 取代地圖 SDK 的強依賴**
+   - **決定**：核心依賴於瀏覽器原生的 `navigator.geolocation` 取得經緯度，並透過簡單的 HTML DOM 顯示距離或結合輕量級開源地圖 (如 Leaflet.js)，而非強制綁定 Google Maps 商業 API。
+   - **原因**：減少 MVP 開發初期的 API 費用成本，並確保系統核心邏輯（經緯度距離計算：Haversine 公式）獨立於第三方地圖圖資服務之外。
