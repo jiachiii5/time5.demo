@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - Time5 Collab{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">&larr; Back</a>
+        <h2 style="margin: 0;">{{ project.name }}</h2>
+        <span class="badge badge-{{ role }}">{{ role }}</span>
+    </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 2fr 1fr;">
+    <!-- Documents Section -->
+    <div>
+        <div class="glass-card mb-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 style="margin: 0;">Documents</h3>
+                {% if role in ['owner', 'editor'] %}
+                    <button class="btn btn-primary" onclick="document.getElementById('new-doc-form').style.display='block'" style="padding: 0.4rem 1rem;">
+                        + New Document
+                    </button>
+                {% endif %}
+            </div>
+
+            <div id="new-doc-form" style="display: none;" class="mb-4">
+                <form action="{{ url_for('new_document', project_id=project.id) }}" method="post" class="flex gap-2">
+                    <input type="text" name="title" placeholder="Document Title" class="form-control" required style="flex: 1;">
+                    <button type="submit" class="btn btn-success">Add</button>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-doc-form').style.display='none'">Cancel</button>
+                </form>
+            </div>
+
+            {% if documents %}
+                <ul class="list-group">
+                    {% for doc in documents %}
+                        <li class="list-item">
+                            <a href="{{ url_for('document', doc_id=doc.id) }}" style="color: var(--text-primary); text-decoration: none; font-weight: 500;">
+                                📄 {{ doc.title }}
+                            </a>
+                            <div class="text-muted" style="font-size: 0.75rem;">
+                                Modified: {{ doc.last_modified_at[:16] }}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted text-center" style="padding: 2rem 0;">No documents in this project yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Members Section -->
+    <div>
+        <div class="glass-card">
+            <div class="flex justify-between items-center mb-4">
+                <h3 style="margin: 0;">Team</h3>
+                {% if role == 'owner' and inviteable_users %}
+                    <button class="btn btn-secondary" onclick="document.getElementById('invite-form').style.display='block'" style="padding: 0.4rem 1rem;">
+                        Invite
+                    </button>
+                {% endif %}
+            </div>
+
+            <div id="invite-form" style="display: none;" class="mb-4">
+                <form action="{{ url_for('invite_member', project_id=project.id) }}" method="post" class="flex flex-col gap-2">
+                    <select name="user_id" class="form-control" required>
+                        <option value="">Select user...</option>
+                        {% for u in inviteable_users %}
+                            <option value="{{ u.id }}">{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="role" class="form-control" required>
+                        <option value="editor">Editor</option>
+                        <option value="viewer">Viewer</option>
+                        <option value="owner">Owner</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <button type="submit" class="btn btn-success" style="flex: 1;">Invite</button>
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('invite-form').style.display='none'">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <ul class="list-group">
+                {% for m in members %}
+                    <li class="list-item" style="padding: 0.75rem 0;">
+                        <span class="flex items-center gap-2">
+                            <div style="width: 32px; height: 32px; background: var(--surface-hover); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-color);">
+                                {{ m.username[0] | upper }}
+                            </div>
+                            {{ m.username }}
+                        </span>
+                        <span class="badge badge-{{ m.role }}">{{ m.role }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
