@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ doc.title }} - Time5 Collab{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('view_project', project_id=doc.project_id) }}" class="btn btn-secondary">&larr; Project</a>
+        <h2 style="margin: 0;">{{ doc.title }}</h2>
+        <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--text-secondary);">v{{ doc.version }}</span>
+    </div>
+    
+    <div class="flex items-center gap-2">
+        {% if is_locked %}
+            <div class="badge" style="background: rgba(245, 158, 11, 0.2); color: var(--warning-color); font-size: 0.875rem; padding: 0.5rem 1rem; text-transform: none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                {% if is_locked_by_me %}
+                    Locked by you
+                {% else %}
+                    Locked by {{ locked_by_username }}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if can_edit %}
+            <form method="post" style="display: inline;">
+                {% if is_locked_by_me %}
+                    <input type="hidden" name="action" value="unlock">
+                    <button type="submit" class="btn btn-secondary">Release Lock</button>
+                {% elif not is_locked %}
+                    <input type="hidden" name="action" value="lock">
+                    <button type="submit" class="btn btn-primary">Lock to Edit</button>
+                {% endif %}
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="glass-card" style="padding: 1rem;">
+    {% if is_locked_by_me %}
+        <form method="post">
+            <input type="hidden" name="action" value="save">
+            <textarea name="content" class="editor">{{ doc.content }}</textarea>
+            <div class="flex justify-end mt-4">
+                <button type="submit" class="btn btn-success">Save Changes</button>
+            </div>
+        </form>
+    {% else %}
+        <textarea class="editor" disabled>{{ doc.content }}</textarea>
+        {% if not can_edit %}
+            <div class="text-center mt-4 text-muted">You only have permission to view this document.</div>
+        {% elif is_locked %}
+            <div class="text-center mt-4 text-muted">This document is currently locked for editing by another user.</div>
+        {% else %}
+            <div class="text-center mt-4 text-muted">Click "Lock to Edit" to start making changes.</div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
