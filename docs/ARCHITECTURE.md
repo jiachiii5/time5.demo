@@ -1,104 +1,95 @@
-# GeoDrop 系統架構設計 (Architecture)
+# 系統架構設計 (ARCHITECTURE) - 感官封存模組
 
 ## 1. 技術架構說明
+本專案採用典型的 Web 應用程式架構，以 Python Flask 作為後端框架，不採用純前後端分離，而是透過 Flask 與 Jinja2 直接渲染頁面，以降低開發複雜度並加快 MVP 實作速度。
 
-本專案採用經典的伺服器渲染（Server-Side Rendering, SSR）架構，不進行前後端分離，以求快速驗證想法並簡化部署。
+- **前端 (Frontend)**：HTML / CSS / Vanilla JS
+  - 負責使用者介面互動，包含使用 Web Audio API 進行錄音，以及向後端發送包含音訊或文字的 API 請求，並顯示 Loading 動態與最終封存結果。
+- **後端 (Backend)**：Python + Flask
+  - 負責接收前端請求、處理檔案上傳、串接外部 AI 服務（語音轉文字、AI 繪圖），並將資料寫入資料庫。
+- **模板引擎 (Template Engine)**：Jinja2
+  - 結合後端傳遞的資料，動態生成 HTML 頁面並回傳給瀏覽器。
+- **資料庫 (Database)**：SQLite
+  - 輕量級關聯式資料庫，適合初期 MVP 開發。儲存感官紀錄（如音訊檔路徑、提煉文字、圖片路徑與時間戳記）。
 
-### 選用技術與原因
-- **後端框架：Python + Flask**
-  - **原因**：輕量級、彈性高，適合快速建立 MVP，且 Python 有豐富的數學與地理運算函式庫，有利於後續演算法擴充。
-- **模板引擎：Jinja2**
-  - **原因**：Flask 內建，能快速將後端資料注入 HTML 頁面中渲染給前端，降低開發成本。
-- **資料庫：SQLite**
-  - **原因**：無需額外架設資料庫伺服器，檔案型資料庫即可滿足初期開發與 MVP 的儲存需求。
-- **前端技術：HTML5 / CSS / Vanilla JS**
-  - **原因**：使用原生 JavaScript 呼叫 HTML5 Geolocation API 來取得 GPS 定位，並透過簡單的 AJAX/Fetch 與後端進行經緯度資料驗證。
-
-### Flask MVC 模式說明
-- **Model（模型）**：負責與 SQLite 溝通，定義 `User`、`Package` (包裹)、`UnlockRecord` (解鎖紀錄) 等資料表結構與存取邏輯。
-- **View（視圖）**：在此架構下為 Jinja2 Templates，負責將 HTML 呈現給使用者介面。
-- **Controller（控制器）**：Flask 的 Routes，負責接收前端請求、呼叫 Model 處理業務邏輯（如判斷是否在 50 公尺內），最後將結果傳給 Jinja2 渲染畫面。
-
----
+**MVC 模式職責分配**：
+- **Model (模型)**：管理資料庫的結構與 CRUD 操作。
+- **View (視圖)**：Jinja2 模板與靜態資源（CSS/JS），負責將資料呈現給使用者。
+- **Controller (控制器)**：Flask 路由，負責接收 HTTP 請求、呼叫模型進行資料處理、呼叫外部 API，最後決定渲染哪一個視圖並回傳。
 
 ## 2. 專案資料夾結構
 
-以下為 GeoDrop 專案的目錄結構規劃：
+建議的資料夾結構如下，以模組化方式組織程式碼：
 
 ```text
 time5.demo/
 │
-├── app/                      # Flask 應用主目錄
-│   ├── __init__.py           # 建立 Flask App 實例與初始化
-│   ├── models/               # 資料庫模型 (Model)
-│   │   └── database.py       # 存放 User, Package, Record 等資料定義
-│   ├── routes/               # Flask 路由 (Controller)
-│   │   ├── main.py           # 主頁面、地圖相關路由
-│   │   └── user.py           # 用戶登入、個人紀錄路由
-│   ├── static/               # 靜態資源檔案
-│   │   ├── css/
-│   │   │   └── style.css     # 全域樣式與地圖樣式
-│   │   └── js/
-│   │       └── map.js        # 處理 HTML5 GPS 定位與地圖互動邏輯
-│   └── templates/            # Jinja2 HTML 模板 (View)
-│       ├── base.html         # 共用版型 (Header/Footer)
-│       ├── index.html        # 首頁與地圖主畫面
-│       ├── unlock.html       # 解鎖成功與包裹內容畫面
-│       └── profile.html      # 個人歷史紀錄畫面
+├── app/
+│   ├── __init__.py          # 建立 Flask App 實例與初始化
+│   ├── models/              # 資料庫模型與存取邏輯
+│   │   ├── __init__.py
+│   │   └── record.py        # 處理封存紀錄的資料庫操作
+│   ├── routes/              # Flask 路由 (Controller)
+│   │   ├── __init__.py
+│   │   ├── main.py          # 主頁面路由 (首頁、歷史紀錄)
+│   │   └── api.py           # 負責處理非同步請求與呼叫 AI API
+│   ├── services/            # 外部服務串接邏輯
+│   │   ├── stt_service.py   # 語音轉文字 API 串接
+│   │   └── image_service.py # AI 繪圖 API 串接
+│   ├── templates/           # Jinja2 HTML 模板 (View)
+│   │   ├── base.html        # 共用版型
+│   │   ├── index.html       # 首頁 (錄音/上傳介面)
+│   │   ├── result.html      # 編輯文字與生成圖片頁面
+│   │   └── history.html     # 歷史封存紀錄列表頁面
+│   └── static/              # 靜態資源
+│       ├── css/
+│       │   └── style.css    # 全域樣式表
+│       ├── js/
+│       │   └── main.js      # 處理 Web Audio API 錄音與上傳等邏輯
+│       └── uploads/         # 使用者上傳與生成的檔案 (音檔、圖片)
 │
-├── instance/                 # 存放不進版控的執行實例檔案
-│   └── database.db           # SQLite 資料庫檔案
+├── instance/
+│   └── database.db          # SQLite 資料庫檔案
 │
-├── docs/                     # 專案文件
-│   ├── PRD.md                # 產品需求文件
-│   └── ARCHITECTURE.md       # 系統架構文件
+├── docs/                    # 專案文件
+│   ├── PRD.md               # 產品需求文件
+│   └── ARCHITECTURE.md      # 系統架構文件
 │
-├── .gitignore                # Git 忽略設定
-├── requirements.txt          # Python 依賴套件清單
-└── app.py                    # 專案啟動入口 (Entry Point)
+├── requirements.txt         # Python 相依套件清單
+├── .env                     # 環境變數 (API Keys等，不進版控)
+└── run.py                   # 啟動應用程式的進入點
 ```
-
----
 
 ## 3. 元件關係圖
 
-以下圖示說明使用者（瀏覽器）如何與系統元件互動：
+以下是整個系統從瀏覽器到後端與外部 API 的運作流程：
 
 ```mermaid
-flowchart TD
-    Browser[瀏覽器 (HTML/JS)]
+sequenceDiagram
+    participant Browser as 瀏覽器 (Frontend)
+    participant Flask as Flask 路由 (Controller)
+    participant Services as AI 服務 (Services)
+    participant DB as SQLite 資料庫 (Model)
     
-    subgraph Server [Flask 伺服器]
-        Route[Flask Route (Controller)]
-        Model[資料庫模型 (Model)]
-        Template[Jinja2 模板 (View)]
-    end
+    %% 錄音與提煉文字流程
+    Browser->>Flask: 上傳音訊檔案 (POST /api/upload)
+    Flask->>Services: 呼叫 STT API
+    Services-->>Flask: 回傳提煉文字
+    Flask-->>Browser: 回傳文字並渲染至前端
     
-    Database[(SQLite 資料庫)]
+    %% 生成圖片流程
+    Browser->>Flask: 送出修改後的文字 (POST /api/generate)
+    Flask->>Services: 呼叫 AI 繪圖 API
+    Services-->>Flask: 回傳生成圖片
     
-    Browser -- 1. HTTP Request (例如帶有 GPS 座標的解鎖請求) --> Route
-    Route -- 2. 查詢/驗證包裹資料 --> Model
-    Model -- 3. SQL 查詢 --> Database
-    Database -- 4. 回傳資料 --> Model
-    Model -- 5. 業務邏輯判斷 (距離計算) --> Route
-    Route -- 6. 注入資料並渲染 --> Template
-    Template -- 7. 產生最終 HTML --> Route
-    Route -- 8. HTTP Response --> Browser
-    Browser -- 9. 呼叫 HTML5 Geolocation API --> Browser
+    %% 儲存封存紀錄
+    Flask->>DB: 儲存音訊路徑、文字、圖片路徑
+    DB-->>Flask: 儲存成功
+    Flask-->>Browser: 回傳成功並導向結果頁面
 ```
-
----
 
 ## 4. 關鍵設計決策
 
-1. **GPS 圍欄偵測在後端驗證 (Server-side Verification)**
-   - **決定**：前端 JS 負責持續取得使用者 GPS 並顯示在地圖上，但當使用者點擊「解鎖」時，前端必須將經緯度發送至後端，由後端計算距離是否小於 50 公尺來決定是否解鎖成功。
-   - **原因**：若全由前端判斷，有心人士容易透過修改 JS 程式碼來作弊。後端驗證能確保解鎖邏輯的安全與公平性。
-
-2. **隨機遞送演算法的觸發時機**
-   - **決定**：MVP 階段採用「背景定時生成」或「管理員手動生成」批次處理，先在資料庫預先產生一批包裹，而非每次使用者開啟 App 時才即時計算生成。
-   - **原因**：即時計算會大幅增加伺服器回應時間；預先生成可讓使用者查詢時只進行簡單的「地理範圍查詢（Bounding Box）」，提升地圖讀取效能。
-
-3. **使用原生 Geolocation API 取代地圖 SDK 的強依賴**
-   - **決定**：核心依賴於瀏覽器原生的 `navigator.geolocation` 取得經緯度，並透過簡單的 HTML DOM 顯示距離或結合輕量級開源地圖 (如 Leaflet.js)，而非強制綁定 Google Maps 商業 API。
-   - **原因**：減少 MVP 開發初期的 API 費用成本，並確保系統核心邏輯（經緯度距離計算：Haversine 公式）獨立於第三方地圖圖資服務之外。
+1. **Services 層的分離**：將呼叫外部 AI API (STT、AI 繪圖) 的邏輯從 `routes` 獨立出來放進 `services` 資料夾。這使得程式碼更易於維護，且未來若要更換不同的 API 供應商（如從 Whisper 換成 Google STT），只需修改 service 層的程式，而不用動到主要的控制邏輯。
+2. **靜態檔案存於本地 `static/uploads/`**：考量到 MVP 階段快速開發的需求，使用者的音檔與生成的圖片將直接存放在專案資料夾內。但後續若要部署上線，建議將這部分改為雲端儲存（如 AWS S3），以避免伺服器硬碟空間不足。
+3. **前端非同步處理**：由於呼叫 AI 服務（特別是繪圖）需要較長時間，在 `index.html` 送出音訊或文字時，透過 JavaScript 使用 AJAX / Fetch API 非同步發送請求，以便在畫面上顯示明確的 Loading 狀態，而不會讓畫面卡死。
