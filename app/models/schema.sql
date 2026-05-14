@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS records;
+
+CREATE TABLE records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  audio_path TEXT NOT NULL,
+  transcribed_text TEXT NOT NULL,
+  image_path TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

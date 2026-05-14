@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="glass-card result-container">
+    <h2 class="glow-text">提煉結果</h2>
+    
+    <div class="audio-playback">
+        <h3>原始聲音</h3>
+        <audio controls src="{{ url_for('static', filename=record.audio_path) }}"></audio>
+    </div>
+
+    <div class="text-editor">
+        <h3>提煉的文字</h3>
+        <p class="hint">你可以修改這段文字，以獲得更符合心境的畫面。</p>
+        <textarea id="promptText" rows="4">{{ record.transcribed_text }}</textarea>
+    </div>
+
+    <div class="action-section">
+        <button id="generateImgBtn" class="btn btn-accent" data-id="{{ record.id }}">
+            <i data-feather="image"></i> 生成視覺記憶
+        </button>
+    </div>
+
+    <div id="imageResult" class="image-result" style="{% if not record.image_path %}display:none;{% endif %}">
+        <h3>視覺封存</h3>
+        <img id="generatedImage" src="{{ record.image_path if record.image_path else '' }}" alt="Generated Image">
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>正在將文字轉化為視覺圖像...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('generateImgBtn').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const recordId = btn.getAttribute('data-id');
+        const prompt = document.getElementById('promptText').value;
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const imageResult = document.getElementById('imageResult');
+        const generatedImage = document.getElementById('generatedImage');
+
+        if(!prompt.trim()) return alert('文字不能為空');
+
+        loadingOverlay.style.display = 'flex';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    record_id: recordId,
+                    prompt: prompt
+                })
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                generatedImage.src = data.image_url;
+                imageResult.style.display = 'block';
+            } else {
+                alert(data.error || '生成失敗');
+            }
+        } catch(err) {
+            console.error(err);
+            alert('發生錯誤');
+        } finally {
+            loadingOverlay.style.display = 'none';
+            btn.disabled = false;
+        }
+    });
+</script>
+{% endblock %}
