@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Time5 Collab{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+    <h2>My Projects</h2>
+    <button class="btn btn-primary" onclick="document.getElementById('new-project-form').style.display='block'">
+        + New Project
+    </button>
+</div>
+
+<div id="new-project-form" class="glass-card mb-4" style="display: none; max-width: 500px;">
+    <h3>Create a New Project</h3>
+    <form action="{{ url_for('new_project') }}" method="post" class="mt-4">
+        <div class="form-group">
+            <label for="name">Project Name</label>
+            <input type="text" name="name" id="name" class="form-control" required>
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="btn btn-success">Create</button>
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-project-form').style.display='none'">Cancel</button>
+        </div>
+    </form>
+</div>
+
+{% if projects %}
+    <div class="grid">
+        {% for project in projects %}
+            <a href="{{ url_for('view_project', project_id=project.id) }}" style="text-decoration: none; color: inherit;">
+                <div class="glass-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 style="margin: 0;">{{ project.name }}</h3>
+                        <span class="badge badge-{{ project.role }}">{{ project.role }}</span>
+                    </div>
+                    <div class="text-muted" style="font-size: 0.875rem;">
+                        Created on {{ project.created_at[:10] }}
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="glass-card text-center" style="padding: 4rem 2rem;">
+        <h3 class="text-muted">You don't have any projects yet.</h3>
+        <p class="text-muted mt-4">Create a new project to start collaborating with your team.</p>
+    </div>
+{% endif %}
+{% endblock %}

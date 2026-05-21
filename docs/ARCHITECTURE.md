@@ -1,84 +1,95 @@
-# 系統架構設計：數位時光膠囊
+# 系統架構設計 (ARCHITECTURE) - 感官封存模組
 
 ## 1. 技術架構說明
+本專案採用典型的 Web 應用程式架構，以 Python Flask 作為後端框架，不採用純前後端分離，而是透過 Flask 與 Jinja2 直接渲染頁面，以降低開發複雜度並加快 MVP 實作速度。
 
-本專案採用經典的 MVC (Model-View-Controller) 架構模式，並以 Python Flask 框架作為核心開發基礎：
+- **前端 (Frontend)**：HTML / CSS / Vanilla JS
+  - 負責使用者介面互動，包含使用 Web Audio API 進行錄音，以及向後端發送包含音訊或文字的 API 請求，並顯示 Loading 動態與最終封存結果。
+- **後端 (Backend)**：Python + Flask
+  - 負責接收前端請求、處理檔案上傳、串接外部 AI 服務（語音轉文字、AI 繪圖），並將資料寫入資料庫。
+- **模板引擎 (Template Engine)**：Jinja2
+  - 結合後端傳遞的資料，動態生成 HTML 頁面並回傳給瀏覽器。
+- **資料庫 (Database)**：SQLite
+  - 輕量級關聯式資料庫，適合初期 MVP 開發。儲存感官紀錄（如音訊檔路徑、提煉文字、圖片路徑與時間戳記）。
 
-*   **選用技術與原因：**
-    *   **Python + Flask**：輕量且靈活，非常適合快速開發與小型專案的後端邏輯。
-    *   **Jinja2**：與 Flask 整合度高，能快速將後端資料渲染成 HTML 頁面，不需前後端分離，降低開發複雜度。
-    *   **SQLite**：輕量級關聯式資料庫，無需額外安裝資料庫伺服器，資料直接存在本地檔案中，非常適合本專案的儲存需求。
-*   **MVC 模式職責劃分：**
-    *   **Model (模型)**：負責定義資料結構（膠囊標題、內容、解鎖日期、心情標籤等）以及與 SQLite 資料庫的互動。
-    *   **View (視圖)**：負責呈現使用者介面，使用 HTML/CSS 與 Jinja2 模板動態顯示資料。
-    *   **Controller (控制器)**：由 Flask 的路由 (Routes) 擔任，負責接收使用者的請求 (如：建立膠囊、查看列表)，呼叫 Model 處理資料，最後將結果傳遞給 View 渲染。
+**MVC 模式職責分配**：
+- **Model (模型)**：管理資料庫的結構與 CRUD 操作。
+- **View (視圖)**：Jinja2 模板與靜態資源（CSS/JS），負責將資料呈現給使用者。
+- **Controller (控制器)**：Flask 路由，負責接收 HTTP 請求、呼叫模型進行資料處理、呼叫外部 API，最後決定渲染哪一個視圖並回傳。
 
 ## 2. 專案資料夾結構
 
-本專案的資料夾結構設計如下，旨在讓程式碼職責分離，方便後續維護與擴充：
+建議的資料夾結構如下，以模組化方式組織程式碼：
 
 ```text
 time5.demo/
-├── app/                      # 應用程式主程式庫
-│   ├── __init__.py           # Flask App 初始化設定
-│   ├── models.py             # 資料庫模型 (定義 Capsule 等資料表)
-│   ├── routes/               # 路由模組 (Controller)
+│
+├── app/
+│   ├── __init__.py          # 建立 Flask App 實例與初始化
+│   ├── models/              # 資料庫模型與存取邏輯
 │   │   ├── __init__.py
-│   │   └── main_routes.py    # 主要頁面路由與 API (如建立、讀取膠囊)
-│   ├── templates/            # Jinja2 HTML 模板 (View)
-│   │   ├── base.html         # 共用版面 (Header, Footer)
-│   │   ├── index.html        # 首頁 (倒數計時與統計)
-│   │   ├── create.html       # 建立膠囊頁面
-│   │   └── list.html         # 回憶清單與解鎖頁面
-│   └── static/               # 靜態資源 (CSS, JavaScript, 圖片)
+│   │   └── record.py        # 處理封存紀錄的資料庫操作
+│   ├── routes/              # Flask 路由 (Controller)
+│   │   ├── __init__.py
+│   │   ├── main.py          # 主頁面路由 (首頁、歷史紀錄)
+│   │   └── api.py           # 負責處理非同步請求與呼叫 AI API
+│   ├── services/            # 外部服務串接邏輯
+│   │   ├── stt_service.py   # 語音轉文字 API 串接
+│   │   └── image_service.py # AI 繪圖 API 串接
+│   ├── templates/           # Jinja2 HTML 模板 (View)
+│   │   ├── base.html        # 共用版型
+│   │   ├── index.html       # 首頁 (錄音/上傳介面)
+│   │   ├── result.html      # 編輯文字與生成圖片頁面
+│   │   └── history.html     # 歷史封存紀錄列表頁面
+│   └── static/              # 靜態資源
 │       ├── css/
-│       │   └── style.css     # 全局樣式
+│       │   └── style.css    # 全域樣式表
 │       ├── js/
-│       │   └── main.js       # 互動邏輯 (如倒數計時計算)
-│       └── images/           # 預設圖片與素材
-├── instance/                 # 本地端運行資料 (不進版控)
-│   └── database.db           # SQLite 資料庫檔案
-├── docs/                     # 專案文件 (PRD, 架構圖等)
-│   ├── PRD.md                # 產品需求文件
-│   └── ARCHITECTURE.md       # 系統架構設計文件
-├── app.py                    # 專案啟動入口 (執行此檔啟動伺服器)
-├── requirements.txt          # Python 依賴套件清單
-└── README.md                 # 專案說明文件
+│       │   └── main.js      # 處理 Web Audio API 錄音與上傳等邏輯
+│       └── uploads/         # 使用者上傳與生成的檔案 (音檔、圖片)
+│
+├── instance/
+│   └── database.db          # SQLite 資料庫檔案
+│
+├── docs/                    # 專案文件
+│   ├── PRD.md               # 產品需求文件
+│   └── ARCHITECTURE.md      # 系統架構文件
+│
+├── requirements.txt         # Python 相依套件清單
+├── .env                     # 環境變數 (API Keys等，不進版控)
+└── run.py                   # 啟動應用程式的進入點
 ```
 
 ## 3. 元件關係圖
 
-以下展示使用者從瀏覽器操作時，系統內部的資料流與元件互動關係：
+以下是整個系統從瀏覽器到後端與外部 API 的運作流程：
 
 ```mermaid
-graph TD
-    Browser[瀏覽器 (Browser)]
+sequenceDiagram
+    participant Browser as 瀏覽器 (Frontend)
+    participant Flask as Flask 路由 (Controller)
+    participant Services as AI 服務 (Services)
+    participant DB as SQLite 資料庫 (Model)
     
-    subgraph Flask Application
-        Route[Flask 路由 (Controller)]
-        Model[資料模型 (Model)]
-        Template[Jinja2 模板 (View)]
-    end
+    %% 錄音與提煉文字流程
+    Browser->>Flask: 上傳音訊檔案 (POST /api/upload)
+    Flask->>Services: 呼叫 STT API
+    Services-->>Flask: 回傳提煉文字
+    Flask-->>Browser: 回傳文字並渲染至前端
     
-    Database[(SQLite 資料庫)]
+    %% 生成圖片流程
+    Browser->>Flask: 送出修改後的文字 (POST /api/generate)
+    Flask->>Services: 呼叫 AI 繪圖 API
+    Services-->>Flask: 回傳生成圖片
     
-    Browser -- "1. 發送 HTTP 請求\n(例如：建立膠囊, 瀏覽列表)" --> Route
-    Route -- "2. 查詢/寫入資料" --> Model
-    Model -- "3. 執行 SQL 指令" --> Database
-    Database -- "4. 回傳資料結果" --> Model
-    Model -- "5. 將資料轉交" --> Route
-    Route -- "6. 傳遞資料與狀態" --> Template
-    Template -- "7. 渲染 HTML 頁面" --> Route
-    Route -- "8. 回傳 HTTP 回應" --> Browser
+    %% 儲存封存紀錄
+    Flask->>DB: 儲存音訊路徑、文字、圖片路徑
+    DB-->>Flask: 儲存成功
+    Flask-->>Browser: 回傳成功並導向結果頁面
 ```
 
 ## 4. 關鍵設計決策
 
-1.  **整合式渲染 (Server-Side Rendering)**：
-    *   **原因**：為了快速驗證想法與完成 MVP，我們選擇不用 React/Vue 進行前後端分離，而是利用 Jinja2 在伺服器端直接渲染畫面。這樣可以減少 API 的設計負擔，並降低開發與部署的複雜度。
-2.  **檔案型資料庫 (SQLite)**：
-    *   **原因**：時光膠囊 MVP 版本主要著重於功能驗證與單機/輕量運行，不需要承載高併發流量。使用 SQLite 可以免去資料庫伺服器的建置與維護成本。
-3.  **時間鎖的後端驗證機制**：
-    *   **原因**：為了確保「解鎖日期」的機制不被輕易破解，時間鎖的驗證必須在後端 (Flask Route) 執行。前端只負責顯示倒數計時，任何對未解鎖膠囊內容的存取請求，後端都會檢查當前時間，若未到期則拒絕回傳真實內容。
-4.  **心情標籤的純文字儲存 (MVP 階段)**：
-    *   **原因**：初期為了簡化資料表關聯，心情標籤 (Mood Tags) 將以逗號分隔的字串直接存入 Capsule 資料表中，而非建立獨立的 Tag 資料表。這能在不影響查詢體驗的前提下，加快開發速度。
+1. **Services 層的分離**：將呼叫外部 AI API (STT、AI 繪圖) 的邏輯從 `routes` 獨立出來放進 `services` 資料夾。這使得程式碼更易於維護，且未來若要更換不同的 API 供應商（如從 Whisper 換成 Google STT），只需修改 service 層的程式，而不用動到主要的控制邏輯。
+2. **靜態檔案存於本地 `static/uploads/`**：考量到 MVP 階段快速開發的需求，使用者的音檔與生成的圖片將直接存放在專案資料夾內。但後續若要部署上線，建議將這部分改為雲端儲存（如 AWS S3），以避免伺服器硬碟空間不足。
+3. **前端非同步處理**：由於呼叫 AI 服務（特別是繪圖）需要較長時間，在 `index.html` 送出音訊或文字時，透過 JavaScript 使用 AJAX / Fetch API 非同步發送請求，以便在畫面上顯示明確的 Loading 狀態，而不會讓畫面卡死。

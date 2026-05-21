@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="glass-card text-center recorder-container">
+    <h1 class="glow-text">捕捉當下的感官</h1>
+    <p class="subtitle">錄製一段聲音，讓 AI 提煉文字並化為視覺記憶。</p>
+
+    <div class="audio-controls">
+        <button id="recordBtn" class="btn btn-primary pulse-btn">
+            <i data-feather="mic"></i> <span id="recordText">開始錄音</span>
+        </button>
+        <span class="timer" id="recordingTimer">00:00</span>
+    </div>
+
+    <div class="or-divider">或</div>
+    
+    <div class="upload-section">
+        <input type="file" id="audioUpload" accept="audio/*" style="display: none;">
+        <label for="audioUpload" class="btn btn-secondary">
+            <i data-feather="upload-cloud"></i> 上傳音訊檔
+        </label>
+        <div id="fileName" class="file-name"></div>
+    </div>
+
+    <div class="action-section" style="display: none;" id="actionSection">
+        <button id="submitAudioBtn" class="btn btn-accent">
+            <i data-feather="cpu"></i> 開始提煉
+        </button>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p id="loadingText">正在提煉聲音中的文字...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}
