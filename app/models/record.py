@@ -49,3 +49,25 @@ def get_all_records():
     return db.execute(
         'SELECT * FROM records ORDER BY created_at DESC'
     ).fetchall()
+
+def search_records(query=None, start_date=None, end_date=None):
+    db = get_db()
+    sql = 'SELECT * FROM records WHERE 1=1'
+    params = []
+    
+    if query:
+        sql += ' AND transcribed_text LIKE ?'
+        params.append(f'%{query}%')
+        
+    if start_date:
+        sql += ' AND date(created_at) >= ?'
+        params.append(start_date)
+        
+    if end_date:
+        sql += ' AND date(created_at) <= ?'
+        params.append(end_date)
+        
+    sql += ' ORDER BY created_at DESC'
+    
+    return db.execute(sql, params).fetchall()
+

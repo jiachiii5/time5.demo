@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 from app.services.stt_service import transcribe_audio
 from app.services.image_service import generate_image
-from app.models.record import create_record, update_record_image, get_record
+from app.models.record import create_record, update_record_image, get_record, search_records
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -65,3 +65,27 @@ def generate():
         'success': True,
         'image_url': image_url
     })
+
+@bp.route('/search', methods=['GET'])
+def api_search():
+    q = request.args.get('q', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    
+    records = search_records(query=q, start_date=start_date, end_date=end_date)
+    
+    results = []
+    for r in records:
+        results.append({
+            'id': r['id'],
+            'audio_path': r['audio_path'],
+            'transcribed_text': r['transcribed_text'],
+            'image_path': r['image_path'],
+            'created_at': r['created_at'].isoformat() if hasattr(r['created_at'], 'isoformat') else str(r['created_at'])
+        })
+        
+    return jsonify({
+        'success': True,
+        'records': results
+    })
+
