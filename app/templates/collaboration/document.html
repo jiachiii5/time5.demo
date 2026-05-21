@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}{{ doc.title }} - 編輯文件{% endblock %}
+
+{% block content %}
+<div class="collab-header" style="margin-top: 2rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a href="{{ url_for('collaboration.view_project', project_id=doc.project_id) }}" class="btn btn-secondary" style="padding: 10px 16px;">
+                <i data-feather="folder"></i> 專案
+            </a>
+            <h1 class="glow-text" style="margin: 0; font-size: 1.8rem; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ doc.title }}</h1>
+            <span class="role-badge" style="background: rgba(255, 255, 255, 0.08); color: var(--text-muted); font-size: 0.75rem; border: 1px solid var(--glass-border);">v{{ doc.version }}</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+            {% if is_locked %}
+                {% if is_locked_by_me %}
+                    <div class="lock-status-badge locked-by-me">
+                        <i data-feather="edit-3" style="width: 14px; height: 14px;"></i>
+                        <span>您正在鎖定編輯中</span>
+                    </div>
+                {% else %}
+                    <div class="lock-status-badge locked-by-other">
+                        <i data-feather="lock" style="width: 14px; height: 14px;"></i>
+                        <span>已由 {{ locked_by_username }} 鎖定</span>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="lock-status-badge unlocked">
+                    <i data-feather="unlock" style="width: 14px; height: 14px;"></i>
+                    <span>未鎖定 (唯讀)</span>
+                </div>
+            {% endif %}
+
+            {% if can_edit %}
+                <form action="{{ url_for('collaboration.document', doc_id=doc.id) }}" method="post" style="margin: 0;">
+                    {% if is_locked_by_me %}
+                        <input type="hidden" name="action" value="unlock">
+                        <button type="submit" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.9rem;">
+                            <i data-feather="user-check"></i> 釋放鎖定
+                        </button>
+                    {% elif not is_locked %}
+                        <input type="hidden" name="action" value="lock">
+                        <button type="submit" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9rem;">
+                            <i data-feather="edit-2"></i> 鎖定並編輯
+                        </button>
+                    {% endif %}
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="glass-card" style="margin-top: 0; padding: 1.5rem; border-radius: 16px;">
+    {% if is_locked_by_me %}
+        <form action="{{ url_for('collaboration.document', doc_id=doc.id) }}" method="post">
+            <input type="hidden" name="action" value="save">
+            <div class="text-editor-container">
+                <textarea name="content" class="document-textarea" rows="18" placeholder="在此輸入 Markdown 內容..." required>{{ doc.content }}</textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 1.2rem;">
+                <button type="submit" class="btn btn-accent" style="padding: 10px 24px;">
+                    <i data-feather="save"></i> 儲存變更
+                </button>
+            </div>
+        </form>
+    {% else %}
+        <div class="text-editor-container">
+            <textarea class="document-textarea" rows="18" disabled style="opacity: 0.7; background: rgba(0,0,0,0.3);">{{ doc.content }}</textarea>
+        </div>
+        
+        <div class="editor-info-bar" style="margin-top: 1.2rem; text-align: center; color: var(--text-muted); font-size: 0.95rem;">
+            {% if not can_edit %}
+                <i data-feather="eye" style="vertical-align: middle; margin-right: 4px; width: 16px; height: 16px;"></i> 
+                <span>您目前只有檢視此文件的權限 (Viewer)。</span>
+            {% elif is_locked %}
+                <i data-feather="alert-circle" style="vertical-align: middle; margin-right: 4px; width: 16px; height: 16px; color: #fbbf24;"></i> 
+                <span>此文件目前正由 <strong>{{ locked_by_username }}</strong> 鎖定編輯中，請稍後再試。</span>
+            {% else %}
+                <i data-feather="info" style="vertical-align: middle; margin-right: 4px; width: 16px; height: 16px; color: var(--primary);"></i> 
+                <span>此文件處於唯讀狀態。若要編輯，請點擊右上方的 <strong>「鎖定並編輯」</strong>。</span>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.lock-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.locked-by-me {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.locked-by-other {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.unlocked {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+}
+.text-editor-container {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 4px;
+    transition: border-color 0.3s;
+}
+.text-editor-container:focus-within {
+    border-color: var(--primary);
+}
+.document-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-main);
+    padding: 1rem;
+    font-size: 1.05rem;
+    font-family: 'Courier New', Courier, monospace, 'Inter';
+    line-height: 1.6;
+    resize: vertical;
+}
+</style>
+{% endblock %}

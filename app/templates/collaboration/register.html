@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}註冊 - 團隊協作{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="max-width: 400px; margin: 4rem auto; position: relative;">
+    <h2 class="glow-text text-center" style="font-size: 2rem; margin-bottom: 1.5rem;">註冊新帳戶</h2>
+    <form method="post" action="{{ url_for('collaboration.register') }}">
+        <div class="input-group" style="margin-bottom: 1.2rem;">
+            <label for="username"><i data-feather="user-plus"></i> 使用者名稱</label>
+            <input type="text" name="username" id="username" placeholder="請設定使用者名稱" required autocomplete="username">
+        </div>
+        <div class="input-group" style="margin-bottom: 1.5rem;">
+            <label for="password"><i data-feather="lock"></i> 密碼</label>
+            <input type="password" name="password" id="password" placeholder="請輸入安全密碼" required autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-accent" style="width: 100%;">註冊並登入</button>
+    </form>
+    <div class="text-center" style="margin-top: 1.5rem;">
+        <span style="color: var(--text-muted);">已經有帳戶？</span> 
+        <a href="{{ url_for('collaboration.login') }}" style="color: var(--primary); text-decoration: none; font-weight: 600; margin-left: 5px;">立即登入</a>
+    </div>
+</div>
+{% endblock %}

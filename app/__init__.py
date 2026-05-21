@@ -20,8 +20,29 @@ def create_app(test_config=None):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     # Register blueprints
-    from .routes import main, api
+    from .routes import main, api, collaboration
+    from .models.record import close_db
+    
     app.register_blueprint(main.bp)
     app.register_blueprint(api.bp)
+    app.register_blueprint(collaboration.bp, url_prefix='/collaboration')
+
+    # Register DB teardown
+    app.teardown_appcontext(close_db)
+
+    # Context processor to inject current user globally
+    from flask import session
+    from app.models.record import get_db
+
+    @app.context_processor
+    def inject_user():
+        user = None
+        if 'user_id' in session:
+            try:
+                db = get_db()
+                user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+            except Exception:
+                pass
+        return dict(current_user=user)
 
     return app

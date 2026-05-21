@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}儀表板 - 團隊協作{% endblock %}
+
+{% block content %}
+<div class="collab-header" style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: 2rem;">
+    <h1 class="glow-text" style="margin: 0; font-size: 2.2rem;">協作專案空間</h1>
+    <button class="btn btn-accent" onclick="document.getElementById('new-project-form').style.display='block'; window.scrollTo({top: 0, behavior: 'smooth'});">
+        <i data-feather="plus"></i> 建立新專案
+    </button>
+</div>
+
+<div id="new-project-form" class="glass-card" style="display: none; max-width: 600px; margin-bottom: 2.5rem; animation: slideDown 0.3s ease-out; position: relative;">
+    <h3 style="margin-bottom: 1.2rem;"><i data-feather="folder-plus" style="color: var(--primary); vertical-align: middle; margin-right: 8px;"></i> 建立新的專案</h3>
+    <form action="{{ url_for('collaboration.new_project') }}" method="post">
+        <div class="input-group" style="margin-bottom: 1.5rem;">
+            <label for="name">專案名稱</label>
+            <input type="text" name="name" id="name" placeholder="請輸入專案名稱..." required>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-project-form').style.display='none'">取消</button>
+            <button type="submit" class="btn btn-primary">確認建立</button>
+        </div>
+    </form>
+</div>
+
+{% if projects %}
+    <div class="project-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.8rem;">
+        {% for project in projects %}
+            <a href="{{ url_for('collaboration.view_project', project_id=project.id) }}" style="text-decoration: none; color: inherit;">
+                <div class="glass-card record-card" style="margin-top: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 1.8rem; border-radius: 16px;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+                            <h3 class="project-name" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: var(--text-main);">{{ project.name }}</h3>
+                            <span class="role-badge badge-{{ project.role }}">{{ project.role | upper }}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">
+                        <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
+                        <span>建立於 {{ project.created_at[:10] }}</span>
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="glass-card text-center" style="padding: 5rem 2rem;">
+        <i data-feather="folder" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 1.5rem;"></i>
+        <h3 style="color: var(--text-main); font-weight: 500;">目前沒有任何協作專案。</h3>
+        <p style="color: var(--text-muted); margin-top: 0.8rem; font-size: 0.95rem;">點擊上方按鈕建立一個專案，開始與夥伴進行多人實時文檔協作吧！</p>
+    </div>
+{% endif %}
+
+<style>
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.role-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.badge-owner {
+    background: rgba(139, 92, 246, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(139, 92, 246, 0.4);
+}
+.badge-editor {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+.badge-viewer {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+}
+</style>
+{% endblock %}

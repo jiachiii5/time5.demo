@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - 專案詳情{% endblock %}
+
+{% block content %}
+<div class="collab-header" style="margin-top: 2rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a href="{{ url_for('collaboration.dashboard') }}" class="btn btn-secondary" style="padding: 10px 16px;">
+                <i data-feather="arrow-left"></i> 返回
+            </a>
+            <h1 class="glow-text" style="margin: 0; font-size: 2rem;">{{ project.name }}</h1>
+            <span class="role-badge badge-{{ role }}">{{ role | upper }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="project-details-grid">
+    <!-- Documents Section (Left) -->
+    <div class="docs-section">
+        <div class="glass-card" style="margin-top: 0; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0; font-size: 1.4rem; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                    <i data-feather="file-text" style="color: var(--primary);"></i> 文件庫
+                </h3>
+                {% if role in ['owner', 'editor'] %}
+                    <button class="btn btn-primary" onclick="document.getElementById('new-doc-form').style.display='block'" style="padding: 8px 16px; font-size: 0.9rem;">
+                        <i data-feather="file-plus"></i> 新增文件
+                    </button>
+                {% endif %}
+            </div>
+
+            <!-- New Document Form -->
+            <div id="new-doc-form" style="display: none; margin-bottom: 1.5rem; animation: slideDown 0.3s ease-out;">
+                <form action="{{ url_for('collaboration.new_document', project_id=project.id) }}" method="post" style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" name="title" placeholder="請輸入文件標題..." required style="flex: 1; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--glass-border); border-radius: 10px; padding: 10px 14px; color: var(--text-main);">
+                    <button type="submit" class="btn btn-accent" style="padding: 10px 20px;">建立</button>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('new-doc-form').style.display='none'" style="padding: 10px 20px;">取消</button>
+                </form>
+            </div>
+
+            {% if documents %}
+                <div class="doc-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    {% for doc in documents %}
+                        <div class="doc-item-card" style="display: flex; justify-content: space-between; align-items: center; padding: 1.2rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); border-radius: 12px; transition: all 0.3s ease;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <i data-feather="file" style="color: var(--text-muted); width: 20px; height: 20px;"></i>
+                                <div>
+                                    <a href="{{ url_for('collaboration.document', doc_id=doc.id) }}" class="doc-link" style="color: var(--text-main); text-decoration: none; font-weight: 500; font-size: 1.05rem; transition: color 0.3s;">
+                                        {{ doc.title }}
+                                    </a>
+                                    <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+                                        <i data-feather="clock" style="width: 12px; height: 12px;"></i>
+                                        <span>最後修改於 {{ doc.last_modified_at[:16] }} (第 {{ doc.version }} 版)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <a href="{{ url_for('collaboration.document', doc_id=doc.id) }}" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 0.85rem;">
+                                編輯文件
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 3rem 0; color: var(--text-muted);">
+                    <i data-feather="file" style="width: 32px; height: 32px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                    <p>目前在此專案中沒有任何文件。</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Members Section (Right) -->
+    <div class="members-section">
+        <div class="glass-card" style="margin-top: 0; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0; font-size: 1.4rem; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                    <i data-feather="users" style="color: var(--accent);"></i> 成員名單
+                </h3>
+                {% if role == 'owner' and inviteable_users %}
+                    <button class="btn btn-secondary" onclick="document.getElementById('invite-form').style.display='block'" style="padding: 6px 12px; font-size: 0.85rem;">
+                        <i data-feather="user-plus"></i> 邀請
+                    </button>
+                {% endif %}
+            </div>
+
+            <!-- Invite Form -->
+            <div id="invite-form" style="display: none; margin-bottom: 1.5rem; animation: slideDown 0.3s ease-out; background: rgba(0,0,0,0.15); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+                <h4 style="margin-bottom: 8px; font-size: 0.95rem;">邀請新成員</h4>
+                <form action="{{ url_for('collaboration.invite_member', project_id=project.id) }}" method="post" style="display: flex; flex-direction: column; gap: 10px;">
+                    <select name="user_id" required style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px 12px; color: var(--text-main); font-family: inherit;">
+                        <option value="">選擇使用者...</option>
+                        {% for u in inviteable_users %}
+                            <option value="{{ u.id }}">{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="role" required style="background: rgba(0, 0, 0, 0.3); border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px 12px; color: var(--text-main); font-family: inherit;">
+                        <option value="viewer">檢視者 (Viewer)</option>
+                        <option value="editor">編輯者 (Editor)</option>
+                        <option value="owner">所有者 (Owner)</option>
+                    </select>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px;">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('invite-form').style.display='none'" style="padding: 6px 12px; font-size: 0.85rem;">取消</button>
+                        <button type="submit" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;">寄送邀請</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="members-list" style="display: flex; flex-direction: column; gap: 12px;">
+                {% for m in members %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), var(--accent)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 0.9rem;">
+                                {{ m.username[0] | upper }}
+                            </div>
+                            <span style="font-weight: 500; color: var(--text-main);">{{ m.username }}</span>
+                        </div>
+                        <span class="role-badge badge-{{ m.role }}" style="font-size: 0.7rem; padding: 2px 8px;">{{ m.role | upper }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.project-details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+@media (max-width: 768px) {
+    .project-details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.doc-item-card:hover {
+    transform: translateX(4px);
+    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(255, 255, 255, 0.06) !important;
+}
+.doc-link:hover {
+    color: var(--primary) !important;
+}
+.role-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.badge-owner {
+    background: rgba(139, 92, 246, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(139, 92, 246, 0.4);
+}
+.badge-editor {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+.badge-viewer {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+}
+</style>
+{% endblock %}
