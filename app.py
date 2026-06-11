@@ -8,6 +8,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dev_secret_key'
 
 # Initialize DB on startup
+os.makedirs('instance', exist_ok=True)
 with app.app_context():
     database.init_db(app)
 
@@ -199,7 +200,7 @@ def new_document(project_id):
         flash('You do not have permission to create documents in this project.', 'error')
         return redirect(url_for('view_project', project_id=project_id))
 
-    title = request.form['title']
+    title = request.form['title'].strip()
     if title:
         db.execute('INSERT INTO documents (project_id, title) VALUES (?, ?)', (project_id, title))
         db.commit()

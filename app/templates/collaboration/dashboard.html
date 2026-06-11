@@ -37,7 +37,7 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">
                         <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
-                        <span>建立於 {{ project.created_at[:10] }}</span>
+                        <span>建立於 {{ (project.created_at | string)[:10] }}</span>
                     </div>
                 </div>
             </a>

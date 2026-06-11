@@ -19,6 +19,80 @@ document.addEventListener('DOMContentLoaded', () => {
     let finalAudioBlob = null;
     let uploadFile = null;
 
+    // Unlock Settings Selector Logic
+    const unlockSettingsSection = document.getElementById('unlockSettingsSection');
+    const geofenceConfig = document.getElementById('geofenceConfig');
+    const randomConfig = document.getElementById('randomConfig');
+    const randomPreset = document.getElementById('randomPreset');
+    const randomCustomInputs = document.getElementById('randomCustomInputs');
+    const getCurrentLocationBtn = document.getElementById('getCurrentLocationBtn');
+    
+    let selectedUnlockType = 'none';
+
+    if (unlockSettingsSection) {
+        const selectButtons = document.querySelectorAll('.unlock-type-selector .btn-select');
+        selectButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectButtons.forEach(b => {
+                    b.classList.remove('active');
+                    b.style.border = '1px solid var(--glass-border)';
+                    b.style.background = 'rgba(0,0,0,0.25)';
+                    b.style.color = 'var(--text-muted)';
+                });
+
+                btn.classList.add('active');
+                btn.style.border = '1px solid rgba(59, 130, 246, 0.4)';
+                btn.style.background = 'rgba(59, 130, 246, 0.1)';
+                btn.style.color = 'var(--primary)';
+
+                selectedUnlockType = btn.getAttribute('data-type');
+                
+                geofenceConfig.style.display = selectedUnlockType === 'geofence' ? 'block' : 'none';
+                randomConfig.style.display = selectedUnlockType === 'random' ? 'block' : 'none';
+                
+                if (typeof feather !== 'undefined') feather.replace();
+            });
+        });
+
+        // GPS getCurrentPosition
+        getCurrentLocationBtn.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                alert('您的瀏覽器不支援 GPS 定位功能。');
+                return;
+            }
+            getCurrentLocationBtn.disabled = true;
+            const originalHTML = getCurrentLocationBtn.innerHTML;
+            getCurrentLocationBtn.innerHTML = '定位中...';
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    document.getElementById('targetLatitude').value = position.coords.latitude.toFixed(6);
+                    document.getElementById('targetLongitude').value = position.coords.longitude.toFixed(6);
+                    getCurrentLocationBtn.disabled = false;
+                    getCurrentLocationBtn.innerHTML = originalHTML;
+                    if (typeof feather !== 'undefined') feather.replace();
+                },
+                (err) => {
+                    console.error(err);
+                    alert('無法取得定位，請確認是否允許瀏覽器存取位置資訊。');
+                    getCurrentLocationBtn.disabled = false;
+                    getCurrentLocationBtn.innerHTML = originalHTML;
+                    if (typeof feather !== 'undefined') feather.replace();
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+
+        // Random Preset change helper
+        randomPreset.addEventListener('change', () => {
+            if (randomPreset.value === 'custom') {
+                randomCustomInputs.style.display = 'flex';
+            } else {
+                randomCustomInputs.style.display = 'none';
+            }
+        });
+    }
+
     // Timer logic
     function updateTimer() {
         const diff = Date.now() - startTime;
@@ -45,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     finalAudioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     // Ready to submit
                     actionSection.style.display = 'block';
+                    if (unlockSettingsSection) unlockSettingsSection.style.display = 'block';
                     uploadFile = null; // Clear upload if recorded
                     fileNameDisplay.textContent = '已錄製音訊';
                 };
@@ -86,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
             finalAudioBlob = null; // Clear record if uploaded
             fileNameDisplay.textContent = `已選擇：${file.name}`;
             actionSection.style.display = 'block';
+            if (unlockSettingsSection) unlockSettingsSection.style.display = 'block';
             
             // Reset recording UI
             if(isRecording) {
@@ -105,6 +181,31 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('audio', finalAudioBlob, 'record.webm');
         } else {
             formData.append('audio', uploadFile);
+        }
+
+        // Append unlock configurations
+        formData.append('unlock_type', selectedUnlockType);
+        if (selectedUnlockType === 'geofence') {
+            formData.append('location_name', document.getElementById('locationName').value);
+            formData.append('latitude', document.getElementById('targetLatitude').value);
+            formData.append('longitude', document.getElementById('targetLongitude').value);
+            formData.append('radius', document.getElementById('targetRadius').value);
+        } else if (selectedUnlockType === 'random') {
+            const presetVal = randomPreset.value;
+            let minH = 1;
+            let maxH = 24;
+            if (presetVal === '1-2') {
+                minH = 1; maxH = 2;
+            } else if (presetVal === '12-24') {
+                minH = 12; maxH = 24;
+            } else if (presetVal === '24-72') {
+                minH = 24; maxH = 72;
+            } else if (presetVal === 'custom') {
+                minH = parseInt(document.getElementById('randomMinHours').value) || 1;
+                maxH = parseInt(document.getElementById('randomMaxHours').value) || 2;
+            }
+            formData.append('random_min_hours', minH);
+            formData.append('random_max_hours', maxH);
         }
 
         loadingOverlay.style.display = 'flex';

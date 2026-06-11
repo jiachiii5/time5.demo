@@ -34,7 +34,7 @@
                         <span class="badge badge-{{ project.role }}">{{ project.role }}</span>
                     </div>
                     <div class="text-muted" style="font-size: 0.875rem;">
-                        Created on {{ project.created_at[:10] }}
+                        Created on {{ (project.created_at | string)[:10] }}
                     </div>
                 </div>
             </a>

@@ -1,79 +1,317 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="glass-card result-container">
-    <h2 class="glow-text">提煉結果</h2>
-    
-    <div class="audio-playback">
-        <h3>原始聲音</h3>
-        <audio controls src="{{ url_for('static', filename=record.audio_path) }}"></audio>
-    </div>
+<div class="glass-card result-container" style="position: relative; overflow: hidden; padding: 2.5rem; border-radius: 20px; margin-top: 2rem;">
+    {% if record.is_locked == 1 %}
+        <!-- 鎖定狀態遮罩與解鎖互動介面 -->
+        <div class="lock-screen-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1rem; text-align: center;">
+            <div class="lock-icon-glow" style="margin-bottom: 2rem; position: relative; display: inline-flex; align-items: center; justify-content: center; width: 90px; height: 90px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.25); animation: pulseRed 2s infinite;">
+                <i data-feather="lock" style="width: 42px; height: 42px; color: #f87171;"></i>
+            </div>
+            
+            {% if record.unlock_type == 'geofence' %}
+                <!-- GPS 地理圍欄解鎖區 -->
+                <h2 class="glow-text" style="font-size: 1.8rem; margin-bottom: 1rem; background: linear-gradient(135deg, #f87171, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📍 GPS 地圖圍欄鎖定中</h2>
+                <p style="color: var(--text-main); max-width: 500px; margin-bottom: 2rem; line-height: 1.6; font-size: 1.05rem;">
+                    這是一顆已被地理圍欄鎖定的時光膠囊。<br>
+                    您必須抵達目標地標周邊解鎖範圍內，才能讀取其中的內容。
+                </p>
+                
+                <div class="geofence-details-card" style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); padding: 1.5rem; border-radius: 12px; max-width: 480px; width: 100%; text-align: left; margin-bottom: 2.5rem; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);">
+                    <div style="font-weight: 600; font-size: 1.1rem; color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                        <i data-feather="map" style="width: 18px; height: 18px;"></i>
+                        <span>目標鎖定地點：{{ record.location_name if record.location_name else '未命名地標' }}</span>
+                    </div>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px;">
+                        <span>• 目標緯度：<strong style="color: var(--text-main);">{{ record.latitude }}</strong></span>
+                        <span>• 目標經度：<strong style="color: var(--text-main);">{{ record.longitude }}</strong></span>
+                        <span>• 解鎖半徑：<strong style="color: var(--text-main);">{{ record.radius }} 公尺</strong></span>
+                    </div>
+                    <div id="distanceStatus" style="font-size: 0.95rem; font-weight: 500; display: none; padding: 10px; border-radius: 8px; text-align: center;"></div>
+                </div>
 
-    <div class="text-editor">
-        <h3>提煉的文字</h3>
-        <p class="hint">你可以修改這段文字，以獲得更符合心境的畫面。</p>
-        <textarea id="promptText" rows="4">{{ record.transcribed_text }}</textarea>
-    </div>
+                <div style="display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 320px;">
+                    <button id="gpsUnlockBtn" class="btn btn-primary" style="padding: 14px 28px; font-size: 1.1rem; border-radius: 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);">
+                        <i data-feather="navigation" style="width: 18px; height: 18px;"></i> 取得當前位置進行驗證解鎖
+                    </button>
+                    
+                    <!-- 模擬測試 GPS 控制面板 -->
+                    <div class="dev-test-panel" style="margin-top: 1.5rem; padding: 1rem; border-radius: 10px; background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.1);">
+                        <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #fbbf24; cursor: pointer; margin-bottom: 8px; font-weight: 500;">
+                            <input type="checkbox" id="enableMockGps" style="accent-color: #fbbf24;"> 🔧 啟用模擬 GPS (開發測試專用)
+                        </label>
+                        <div id="mockGpsInputs" style="display: none; flex-direction: column; gap: 8px; margin-top: 8px;">
+                            <div style="display: flex; gap: 8px;">
+                                <input type="number" step="any" id="mockLatitude" placeholder="模擬緯度" style="flex: 1; padding: 6px; font-size: 0.85rem; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); border-radius: 6px; color: var(--text-main);">
+                                <input type="number" step="any" id="mockLongitude" placeholder="模擬經度" style="flex: 1; padding: 6px; font-size: 0.85rem; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); border-radius: 6px; color: var(--text-main);">
+                            </div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">提示：輸入目標座標可以快速解鎖！</span>
+                        </div>
+                    </div>
+                </div>
 
-    <div class="action-section">
-        <button id="generateImgBtn" class="btn btn-accent" data-id="{{ record.id }}">
-            <i data-feather="image"></i> 生成視覺記憶
-        </button>
-    </div>
+            {% elif record.unlock_type == 'random' %}
+                <!-- 隨機遞送演算解鎖區 -->
+                <h2 class="glow-text" style="font-size: 1.8rem; margin-bottom: 1rem; background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎲 膠囊隨機時空傳送中</h2>
+                <p style="color: var(--text-main); max-width: 500px; margin-bottom: 2rem; line-height: 1.6; font-size: 1.05rem;">
+                    這是一顆已被隨機時空遞送鎖定的時光膠囊。<br>
+                    它正在躍遷不同的時間線，將於演算抵達時間點自動降落開啟。
+                </p>
 
-    <div id="imageResult" class="image-result" style="{% if not record.image_path %}display:none;{% endif %}">
-        <h3>視覺封存</h3>
-        <img id="generatedImage" src="{{ record.image_path if record.image_path else '' }}" alt="Generated Image">
-    </div>
+                <!-- 倒數計時面板 -->
+                <div class="countdown-panel" style="background: rgba(0,0,0,0.25); border: 1px solid var(--glass-border); padding: 2rem; border-radius: 16px; max-width: 420px; width: 100%; margin-bottom: 2.5rem; text-align: center; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; font-weight: 600;">距離膠囊降落解鎖還有</div>
+                    <div id="countdownTimer" style="font-family: 'Courier New', Courier, monospace, sans-serif; font-size: 2.2rem; font-weight: bold; color: var(--primary); text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); display: flex; justify-content: center; gap: 8px;">
+                        <span id="hoursVal">00</span><span style="color: var(--text-muted); font-size: 1.4rem; align-self: flex-end; margin-bottom: 4px;">時</span>
+                        <span id="minsVal">00</span><span style="color: var(--text-muted); font-size: 1.4rem; align-self: flex-end; margin-bottom: 4px;">分</span>
+                        <span id="secsVal">00</span><span style="color: var(--text-muted); font-size: 1.4rem; align-self: flex-end; margin-bottom: 4px;">秒</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                        預計抵達時間：{{ record.delivery_time }}
+                    </div>
+                </div>
 
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-        <div class="spinner"></div>
-        <p>正在將文字轉化為視覺圖像...</p>
-    </div>
+                <!-- 時空加速測試按鈕 -->
+                <div class="dev-test-panel" style="width: 100%; max-width: 320px; padding: 1rem; border-radius: 10px; background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.1); text-align: center;">
+                    <span style="display: block; font-size: 0.85rem; color: #fbbf24; margin-bottom: 8px; font-weight: 500;">🔧 時空傳送加速器 (開發測試專用)</span>
+                    <button id="bypassLockBtn" class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px 16px; border-radius: 6px; width: 100%; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i data-feather="zap" style="width: 14px; height: 14px;"></i> 執行時空加速 (直接解鎖)
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <!-- 原本的已解鎖結果介面 -->
+        <h2 class="glow-text">提煉結果</h2>
+        
+        <div class="audio-playback">
+            <h3>原始聲音</h3>
+            <audio controls src="{{ url_for('static', filename=record.audio_path) }}"></audio>
+        </div>
+
+        <div class="text-editor">
+            <h3>提煉的文字</h3>
+            <p class="hint">你可以修改這段文字，以獲得更符合心境的畫面。</p>
+            <textarea id="promptText" rows="4">{{ record.transcribed_text }}</textarea>
+        </div>
+
+        <div class="action-section">
+            <button id="generateImgBtn" class="btn btn-accent" data-id="{{ record.id }}">
+                <i data-feather="image"></i> 生成視覺記憶
+            </button>
+        </div>
+
+        <div id="imageResult" class="image-result" style="{% if not record.image_path %}display:none;{% endif %}">
+            <h3>視覺封存</h3>
+            <img id="generatedImage" src="{{ record.image_path if record.image_path else '' }}" alt="Generated Image">
+        </div>
+
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+            <p>正在將文字轉化為視覺圖像...</p>
+        </div>
+    {% endif %}
 </div>
+
+<style>
+@keyframes pulseRed {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.getElementById('generateImgBtn').addEventListener('click', async (e) => {
-        const btn = e.currentTarget;
-        const recordId = btn.getAttribute('data-id');
-        const prompt = document.getElementById('promptText').value;
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const imageResult = document.getElementById('imageResult');
-        const generatedImage = document.getElementById('generatedImage');
+    const recordId = "{{ record.id }}";
+    const isLocked = {{ 'true' if record.is_locked == 1 else 'false' }};
+    const unlockType = "{{ record.unlock_type }}";
 
-        if(!prompt.trim()) return alert('文字不能為空');
+    if (isLocked) {
+        if (unlockType === 'geofence') {
+            const gpsUnlockBtn = document.getElementById('gpsUnlockBtn');
+            const enableMockGps = document.getElementById('enableMockGps');
+            const mockGpsInputs = document.getElementById('mockGpsInputs');
+            const distanceStatus = document.getElementById('distanceStatus');
 
-        loadingOverlay.style.display = 'flex';
-        btn.disabled = true;
-
-        try {
-            const res = await fetch('/api/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    record_id: recordId,
-                    prompt: prompt
-                })
+            enableMockGps.addEventListener('change', () => {
+                mockGpsInputs.style.display = enableMockGps.checked ? 'flex' : 'none';
             });
-            const data = await res.json();
-            
-            if(data.success) {
-                generatedImage.src = data.image_url;
-                imageResult.style.display = 'block';
-            } else {
-                alert(data.error || '生成失敗');
+
+            gpsUnlockBtn.addEventListener('click', () => {
+                if (enableMockGps.checked) {
+                    const lat = document.getElementById('mockLatitude').value;
+                    const lng = document.getElementById('mockLongitude').value;
+                    if (!lat || !lng) return alert('請輸入模擬經緯度');
+                    verifyUnlock(lat, lng);
+                } else {
+                    if (!navigator.geolocation) {
+                        alert('您的瀏覽器不支援 GPS 定位');
+                        return;
+                    }
+                    gpsUnlockBtn.disabled = true;
+                    gpsUnlockBtn.innerHTML = '正在取得當前 GPS 定位...';
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            verifyUnlock(position.coords.latitude, position.coords.longitude);
+                        },
+                        (err) => {
+                            console.error(err);
+                            alert('無法取得定位，請確認是否開放位置權限。');
+                            gpsUnlockBtn.disabled = false;
+                            gpsUnlockBtn.innerHTML = '<i data-feather="navigation" style="width: 18px; height: 18px;"></i> 取得當前位置進行驗證解鎖';
+                            if (typeof feather !== 'undefined') feather.replace();
+                        },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                }
+            });
+
+            async function verifyUnlock(lat, lng) {
+                try {
+                    const res = await fetch('/api/unlock', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            record_id: recordId,
+                            latitude: lat,
+                            longitude: lng
+                        })
+                    });
+                    const data = await res.json();
+                    
+                    distanceStatus.style.display = 'block';
+                    if (data.success && data.unlocked) {
+                        distanceStatus.style.background = 'rgba(16, 185, 129, 0.15)';
+                        distanceStatus.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                        distanceStatus.style.color = '#34d399';
+                        distanceStatus.innerHTML = `成功！目前距離目標點：${data.distance} 公尺，正在解鎖時光膠囊...`;
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        distanceStatus.style.background = 'rgba(239, 68, 68, 0.15)';
+                        distanceStatus.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                        distanceStatus.style.color = '#f87171';
+                        distanceStatus.innerHTML = `驗證失敗！目前距離目標點：${data.distance} 公尺，超出解鎖半徑 ${data.radius} 公尺範圍。`;
+                        gpsUnlockBtn.disabled = false;
+                        gpsUnlockBtn.innerHTML = '<i data-feather="navigation" style="width: 18px; height: 18px;"></i> 取得當前位置進行驗證解鎖';
+                        if (typeof feather !== 'undefined') feather.replace();
+                    }
+                } catch(err) {
+                    console.error(err);
+                    alert('連線伺服器發生錯誤');
+                    gpsUnlockBtn.disabled = false;
+                    gpsUnlockBtn.innerHTML = '<i data-feather="navigation" style="width: 18px; height: 18px;"></i> 取得當前位置進行驗證解鎖';
+                    if (typeof feather !== 'undefined') feather.replace();
+                }
             }
-        } catch(err) {
-            console.error(err);
-            alert('發生錯誤');
-        } finally {
-            loadingOverlay.style.display = 'none';
-            btn.disabled = false;
+        } else if (unlockType === 'random') {
+            const hoursVal = document.getElementById('hoursVal');
+            const minsVal = document.getElementById('minsVal');
+            const secsVal = document.getElementById('secsVal');
+            const bypassLockBtn = document.getElementById('bypassLockBtn');
+
+            const deliveryTimeStr = "{{ record.delivery_time }}";
+            const targetDate = new Date(deliveryTimeStr.replace(' ', 'T'));
+
+            function updateCountdown() {
+                const now = new Date();
+                const diffMs = targetDate - now;
+
+                if (diffMs <= 0) {
+                    clearInterval(countdownInterval);
+                    hoursVal.textContent = '00';
+                    minsVal.textContent = '00';
+                    secsVal.textContent = '00';
+                    location.reload();
+                } else {
+                    const totalSecs = Math.floor(diffMs / 1000);
+                    const hours = Math.floor(totalSecs / 3600);
+                    const mins = Math.floor((totalSecs % 3600) / 60);
+                    const secs = totalSecs % 60;
+
+                    hoursVal.textContent = String(hours).padStart(2, '0');
+                    minsVal.textContent = String(mins).padStart(2, '0');
+                    secsVal.textContent = String(secs).padStart(2, '0');
+                }
+            }
+
+            updateCountdown();
+            const countdownInterval = setInterval(updateCountdown, 1000);
+
+            bypassLockBtn.addEventListener('click', async () => {
+                bypassLockBtn.disabled = true;
+                bypassLockBtn.innerHTML = '正在穿梭時空...';
+                try {
+                    const res = await fetch('/api/unlock', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            record_id: recordId,
+                            bypass: true
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.error || '加速解鎖失敗');
+                        bypassLockBtn.disabled = false;
+                        bypassLockBtn.innerHTML = '<i data-feather="zap" style="width: 14px; height: 14px;"></i> 執行時空加速 (直接解鎖)';
+                        if (typeof feather !== 'undefined') feather.replace();
+                    }
+                } catch(err) {
+                    console.error(err);
+                    alert('連線失敗');
+                    bypassLockBtn.disabled = false;
+                    bypassLockBtn.innerHTML = '<i data-feather="zap" style="width: 14px; height: 14px;"></i> 執行時空加速 (直接解鎖)';
+                    if (typeof feather !== 'undefined') feather.replace();
+                }
+            });
         }
-    });
+    } else {
+        document.getElementById('generateImgBtn').addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const recordId = btn.getAttribute('data-id');
+            const prompt = document.getElementById('promptText').value;
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const imageResult = document.getElementById('imageResult');
+            const generatedImage = document.getElementById('generatedImage');
+
+            if(!prompt.trim()) return alert('文字不能為空');
+
+            loadingOverlay.style.display = 'flex';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        record_id: recordId,
+                        prompt: prompt
+                    })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    generatedImage.src = data.image_url;
+                    imageResult.style.display = 'block';
+                } else {
+                    alert(data.error || '生成失敗');
+                }
+            } catch(err) {
+                console.error(err);
+                alert('發生錯誤');
+            } finally {
+                loadingOverlay.style.display = 'none';
+                btn.disabled = false;
+            }
+        });
+    }
 </script>
 {% endblock %}

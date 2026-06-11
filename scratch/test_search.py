@@ -4,7 +4,7 @@ import urllib.request
 import json
 from datetime import datetime, timedelta
 
-DB_PATH = r"c:\Users\User\Desktop\time5.demo\instance\database.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance", "database.db")
 
 def populate_db():
     print("Populating database with test records...")

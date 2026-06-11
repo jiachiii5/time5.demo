@@ -173,33 +173,61 @@ def seed_sensorial_archiving(conn):
     t_3_days_ago = (now - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
     t_1_day_ago = (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
     t_today = now.strftime("%Y-%m-%d %H:%M:%S")
+    t_delivery = (now + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
     
     records = [
-        # Record 1: 3 days ago, fully complete with image
+        # Record 1: 3 days ago, unlocked
         (
             "uploads/forest.wav", 
             "在森林深處，鳥鳴和微風吹過樹葉的沙沙聲，彷彿時間靜止了。", 
             "https://picsum.photos/seed/forest/800/600",
-            t_3_days_ago
+            t_3_days_ago,
+            'none',
+            None,
+            None,
+            None,
+            None,
+            0,
+            None,
+            None,
+            None
         ),
-        # Record 2: 1 day ago, fully complete with image
+        # Record 2: 1 day ago, locked to Taipei 101 via Geofence
         (
             "uploads/cafe.wav", 
             "深夜在城市的咖啡廳，聽著窗外的雨聲，十分寧靜。", 
             "https://picsum.photos/seed/cafe/800/600",
-            t_1_day_ago
+            t_1_day_ago,
+            'geofence',
+            25.033976,
+            121.564472,
+            100.0,
+            "台北 101 信義商圈",
+            1,
+            None,
+            None,
+            None
         ),
-        # Record 3: Today, audio and text ready but IMAGE IS NULL for generation experience
+        # Record 3: Today, Random Delivery in progress (locked)
         (
             "uploads/ocean.wav", 
             "這是一段關於海洋與星空的聲音，感受到海風的吹拂，繁星點點灑落在大海上。", 
             None,
-            t_today
+            t_today,
+            'random',
+            None,
+            None,
+            None,
+            None,
+            1,
+            t_delivery,
+            12,
+            48
         )
     ]
     
     cursor.executemany(
-        "INSERT INTO records (audio_path, transcribed_text, image_path, created_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO records (audio_path, transcribed_text, image_path, created_at, unlock_type, latitude, longitude, radius, location_name, is_locked, delivery_time, random_min_hours, random_max_hours) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         records
     )
     conn.commit()

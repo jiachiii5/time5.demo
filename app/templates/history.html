@@ -35,29 +35,67 @@
 
     <div class="record-grid">
         {% for record in records %}
-        <div class="glass-card record-card">
-            {% if record.image_path %}
-            <div class="record-image" style="background-image: url('{{ record.image_path }}');"></div>
-            {% else %}
-            <div class="record-image placeholder-image">
-                <i data-feather="image"></i>
-            </div>
-            {% endif %}
-            
-            <div class="record-content">
-                <p class="record-date">{{ record.created_at }}</p>
-                <p class="record-text">{{ record.transcribed_text }}</p>
-                <div class="record-audio">
-                    <audio controls src="{{ url_for('static', filename=record.audio_path) }}"></audio>
+        <div class="glass-card record-card" style="position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; min-height: 380px;">
+            {% if record.is_locked == 1 %}
+                <!-- 鎖定狀態卡片 -->
+                <div class="record-image placeholder-image" style="background: rgba(239, 68, 68, 0.03); border-bottom: 1px solid var(--glass-border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                    <i data-feather="lock" style="width: 28px; height: 28px; color: #f87171;"></i>
+                    <span style="font-size: 0.75rem; font-weight: 600; color: #f87171; letter-spacing: 1px; text-transform: uppercase;">時光鎖定中</span>
                 </div>
-                <a href="/result/{{ record.id }}" class="btn btn-secondary btn-sm" style="margin-top:1rem;">
-                    查看詳情
-                </a>
-            </div>
+                
+                <div class="record-content" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <p class="record-date">{{ record.created_at }}</p>
+                        <div style="margin: 1rem 0; padding: 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); border: 1px dashed rgba(255, 255, 255, 0.08); font-size: 0.9rem;">
+                            {% if record.unlock_type == 'geofence' %}
+                                <span style="color: #f87171; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                                    <i data-feather="map-pin" style="width: 14px; height: 14px;"></i> GPS 圍欄：{{ record.location_name }}
+                                </span>
+                                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; margin-bottom: 0;">須抵達目標地點周邊解鎖半徑 {{ record.radius }}m 內。</p>
+                            {% elif record.unlock_type == 'random' %}
+                                <span style="color: #fbbf24; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                                    <i data-feather="clock" style="width: 14px; height: 14px;"></i> 時空隨機遞送中
+                                </span>
+                                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 6px; margin-bottom: 0;">預計抵達：{{ record.delivery_time }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: auto;">
+                        <a href="/result/{{ record.id }}" class="btn btn-accent btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; font-weight: 600; border-radius: 8px;">
+                            <i data-feather="key" style="width: 14px; height: 14px;"></i> 前往解鎖
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <!-- 已解鎖狀態卡片 (原內容) -->
+                {% if record.image_path %}
+                <div class="record-image" style="background-image: url('{{ record.image_path }}'); border-bottom: 1px solid var(--glass-border);"></div>
+                {% else %}
+                <div class="record-image placeholder-image" style="border-bottom: 1px solid var(--glass-border);">
+                    <i data-feather="image"></i>
+                </div>
+                {% endif %}
+                
+                <div class="record-content" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <p class="record-date">{{ record.created_at }}</p>
+                        <p class="record-text" style="margin-top: 0.5rem; margin-bottom: 1rem; font-size: 0.95rem; line-height: 1.5; color: var(--text-main); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">{{ record.transcribed_text }}</p>
+                    </div>
+                    <div style="margin-top: auto;">
+                        <div class="record-audio" style="margin-bottom: 1rem;">
+                            <audio controls src="{{ url_for('static', filename=record.audio_path) }}" style="width: 100%; height: 32px;"></audio>
+                        </div>
+                        <a href="/result/{{ record.id }}" class="btn btn-secondary btn-sm" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border-radius: 8px;">
+                            查看詳情
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
         </div>
         {% else %}
-        <div class="empty-state text-center" style="grid-column: 1 / -1;">
-            <p>目前還沒有任何封存紀錄。</p>
+        <div class="empty-state text-center" style="grid-column: 1 / -1; padding: 4rem 2rem;">
+            <p style="color: var(--text-muted);">目前還沒有任何封存紀錄。</p>
             <a href="/" class="btn btn-primary" style="margin-top: 1rem;">開始第一筆封存</a>
         </div>
         {% endfor %}
